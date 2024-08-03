@@ -1,0 +1,26 @@
+{
+    "id": "FDDD4C2F",
+    "path": "~/000_DataScience/01_R/02DS_CU/99_545/545.R",
+    "project_path": null,
+    "type": "r_source",
+    "hash": "42235416",
+    "contents": "",
+    "dirty": false,
+    "created": 1722088864262.0,
+    "source_on_save": false,
+    "relative_order": 3,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "1,0",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1722505281,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1722505282006,
+    "read_only": false,
+    "read_only_alternatives": []
+}

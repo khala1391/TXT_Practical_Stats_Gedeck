@@ -1,0 +1,173 @@
+# --- Slide Set#3 ----
+# https://drive.google.com/file/d/177cFa1op3lL1c387v81wL8_A2WfBZaK0/view?usp=sharing
+
+
+# --- Import file ----
+library(RCurl)  # for get data from GitHub
+# dataset from github
+loandataorg <- read.csv(
+    text=getURL("https://raw.githubusercontent.com/kseksan/Credit-Scoring/master/loandataorg.csv"),
+    header=TRUE,
+    stringsAsFactors = TRUE
+    )
+
+# --- EDA ----
+# list col name
+names(loandataorg)
+
+is.factor(loandataorg$AGender)  # auto convert during loading step
+
+head(loandataorg)
+# head(loandataorg,3)    # load 3 row
+
+summary(loandataorg)
+
+# 1) finding : NA in several col i.e. AIncome,ANumberChildren
+# Question: if not treat, is it can analyze (no error)?
+# for Scikit-Learn, it return error
+# 2) incorrect datatype i.e. 
+# ID >> should be Character
+# LStatus >> should be Factor (1,0)
+
+# --- revise datatype ----
+
+loandataorg$ID <- as.character(loandataorg$ID)
+loandataorg$LStatus <- as.factor(loandataorg$LStatus)
+
+summary(loandataorg)    # summary changed
+
+# --- Descriptive Statistics Analysis ----
+
+loandata <- loandataorg
+summary(loandata)
+
+
+# --- clean data ----
+summary(loandata$AIncome)
+
+loandata[!is.na(loandata$AIncome)&loandata$AIncome<0,c(1,12)]
+loandata[9263,12] <- 31600
+loandata[14819,12] <- 45300 
+loandata[15808,12] <- 39700
+
+summary(loandata$AIncome)    # recheck
+
+# --- impute data - option#1: mean - AIncome ----
+
+avg_income <- mean(loandata$AIncome, na.rm=TRUE)
+avg_income
+
+new_income <- loandata$AIncome
+new_income[is.na(new_income)] <- avg_income
+
+summary(new_income)    # no NA, avg not changed
+
+# --- impute data - option#2: regression - AIncome ----
+
+cutlist <- loandata$AIncome<50000 & !is.na(loandata$AIncome)
+plot(loandata$Age[cutlist],loandata$AIncome[cutlist],
+     xlab = "Age",ylab = "0 < AIncome < 50000",
+     main = "Scater Plot of Age and AIncome",
+     col = loandata$AEducation[cutlist])
+legend("bottomright",c("Edu_GRAD","Edu_HIGHER","Edu_LOWER"),
+       col = c("black","red","green", pch = 1))
+
+# multiple linear regression
+# AIncome = b0 + b1*Age + b2AEducation
+
+mul_reg <- lm(AIncome ~ Age + AEducation,
+              data = loandata[cutlist,])
+income_pred <- predict.lm(mul_reg,newdata = loandata)
+income_pred <- ifelse(is.na(loandata$AIncome),
+                      income_pred, loandata$AIncome)
+loandata$AIncome <- income_pred
+
+
+summary(loandata$AIncome)    # no NA, avg changed to 34090
+
+# --- impute data - option#1: Bootstrap_way1 - AHousing ----
+summary(loandata$AHousing)
+# DEP  OTH  OWN  REN  WEL NA's 
+# 4915 1861 3367 2964 2700  574 
+
+# note: data is categorical data, so unable to regress
+
+set.seed(2312)
+newhousing <- loandata$AHousing
+mylist <- !is.na(newhousing)
+outmylist <- is.na(newhousing)
+outside <- length(newhousing[outmylist])
+
+# sample(x, size, replace = FALSE, prob = NULL)
+newhousing[outmylist] <- sample(newhousing[mylist],
+                                outside,replace=TRUE)
+summary(newhousing)    # no NA
+# note: diff from manual, though same seed
+# DEP  OTH  OWN  REN  WEL 
+# 5108 1925 3490 3074 2784 
+
+# --- impute data - option#2: Bootstrap_way2 - AHousing ----
+
+# cut(vector, break,...) : classify range for numeric data
+ageclass <- cut(loandata$Age,c(0,40,100))
+
+# paste(x,sep=" ",...) ~ zip in python,but concat
+paste(ageclass,loandata$AEducation)
+
+sclass <- as.factor(paste(ageclass,loandata$AEducation))
+levels(sclass) <- 1:nlevels(sclass)    # 6 levels(3Edu*2AgeRange)
+numclass <- nlevels(sclass)    # ~ length (for Factor)
+
+# x <- as.factor(paste(1:3))    # simplified concept
+
+set.seed(2312)
+
+for ( i in 1:numclass){
+        mylist  <- !is.na(loandata$AHousing) & (sclass == i)
+        outmylist <- is.na(loandata$AHousing) & (sclass == i)
+        
+        outside <- length(loandata$AHousing[outmylist])
+        loandata$AHousing[outmylist] <- 
+                    sample(loandata$AHousing[mylist],
+                           outside, replace = TRUE)
+}
+
+summary(loandata$AHousing)
+# note: diff from manual, though same seed
+# DEP  OTH  OWN  REN  WEL 
+# 5077 1924 3493 3101 2786 
+
+
+# --- note: Bootstrap sampling: ----
+# The model performance reaches maximum when the data provided 
+# is less than 0.2 fraction of the original dataset.
+# https://www.analyticsvidhya.com/blog/2020/02/what-is-bootstrap-sampling-in-statistics-and-machine-learning/
+# https://colab.research.google.com/drive/1NNCR8yuwUST7eq3-G5sE3WAClMe-DW2u?ouid=106093063339863513243&usp=drive_link
+
+
+# --- exercise - Bootstrap_way2-apply via vectorize - AHousing ----
+
+
+
+# myfn <- function( argument list) { expression; output }
+# apply(data, margin, function)
+
+
+
+# --- cut outlier - LAmount ----
+
+summary(loandata$LAmount)
+
+upcut <- quantile(loandata$LAmount,0.995)
+lowcut <- quantile(loandata$LAmount,0.005)
+
+loandata$LAmount <- pmin(upcut,loandata$LAmount)     # compare element-wise, keep low value
+loandata$LAmount <- pmax(lowcut,loandata$LAmount)    # compare element-wise, keep high value
+
+summary(loandata$LAmount)
+
+summary(loandata)
+
+
+# --- export data as loandata_treated ----
+write.csv(loandata,file="loandata_treated.csv",row.names = FALSE)

@@ -1,0 +1,237 @@
+# --- Slide Set#4 ----
+# https://drive.google.com/file/d/1UhRtmuTGMAQifyPowovhf3fkcFdPnlL8/view?usp=sharing
+
+# --- 1) Import file ----
+
+
+# Full Path - local : 
+# *** After completion, it is founded that Col 'ANumberChildren' has not treated NA yet.
+# loandata <- read.csv("C:/Users/khala/OneDrive/MyDoc/Documents/000_DataScience/01_R/DS_CU/loandata_treated.csv")
+
+# Short Path:depend on wd
+# getwd()
+# loandata <- read.csv("../DS_CU/loandata_treated.csv",
+#                      header=TRUE,
+#                      stringsAsFactors = TRUE
+#                      )
+
+# --- Import treated file - from git hub
+library(RCurl)  # for get data from GitHub
+# dataset from github
+loandata <- read.csv(
+    text=getURL("https://raw.githubusercontent.com/kseksan/Credit-Scoring/master/loandata.csv"),
+    header=TRUE,
+    stringsAsFactors = TRUE
+)
+
+
+loandata$ID <- as.character(loandata$ID)
+loandata$LStatus <- as.factor(loandata$LStatus)
+
+summary(loandata)
+summary(loandata$LAmount)
+summary(loandata$AIncome)
+summary(loandata$AHousing)
+
+# --- 2) EDA ----
+
+names(loandata)
+
+# --- 3) drop cols ----
+
+loandatafit <- loandata[,c(2,8:18)]
+names(loandatafit)
+
+# --- 4.1.1) modeling GLM - logistic regression (selected params)----
+# focused_indep_params (Xn)
+# > Age
+# > AGender
+# > GCollateral type
+
+# dep_params (y)
+# > LStatus
+
+# prediction type: logistic regression (pay(0)/not pay(1))
+
+fitmodelsmall <- glm(LStatus ~ Age + AGender + GCollateralType,
+                     family = binomial(link="logit"),
+                     data = loandatafit)
+summary(fitmodelsmall)
+
+# --- export modeling result as text/html by stargazer ----
+
+library(stargazer)  # for export lm result
+
+stargazer(fitmodelsmall, type="html",out = "fitmodelsmall.html")
+# note: more examples, see https://libguides.princeton.edu/R-stargazer
+
+# --- 4.1.2) prediction (selected params) ----
+
+# type = "link" : return raw data
+# type = "response" : return prob for TRUE
+
+ystarsmallvec <- predict.glm(fitmodelsmall,
+                             newdata = loandatafit,
+                             type = "link")
+summary(ystarsmallvec)
+
+# *** Question: How to interpret ***
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# -2.1973 -1.7918 -1.7780 -1.6186 -1.5667 -0.4179 
+
+
+pdsmallvec <- predict.glm(fitmodelsmall,
+                             newdata = loandatafit,
+                             type = "response")
+
+summary(pdsmallvec)
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# 0.09999 0.14286 0.14455 0.17380 0.17268 0.39702 
+
+# --- 4.2.1) modeling GLM - logistic regression (all params)----
+
+fitmodelfull <- glm(LStatus ~ .,
+                     family = binomial(link="logit"),
+                     data = loandatafit)
+summary(fitmodelfull)
+
+
+# --- 4.2.2) prediction (all params) ----
+
+ystarfullvec <- predict.glm(fitmodelfull,
+                             newdata = loandatafit,
+                             type = "link")
+summary(ystarfullvec)
+
+
+
+
+pdfullvec <- predict.glm(fitmodelfull,
+                          newdata = loandatafit,
+                          type = "response")
+
+summary(pdfullvec)
+
+# --- model metrics - ROC ----
+
+# ROC: use lib(pROC)
+library(pROC)
+
+roc1 <- roc(loandatafit$LStatus  ~ pdsmallvec, percent=TRUE,
+            plot=TRUE, print.auc=TRUE, col="blue",
+            auc.polygon=TRUE, print.auc.y=50)
+roc2 <- roc(loandatafit$LStatus  ~ pdfullvec, percent=TRUE,
+            plot=TRUE, print.auc=TRUE, col="red",
+            add=TRUE, print.auc.y=100)
+legend("topleft", c("Small Model","Full Model"),
+       col = c("blue","red"), lty=1)
+
+
+# *** create func to convert prob to 1,0 for confusion matrix ***
+# status: stuck on mismatch input shape
+f <- function (input){
+                if (input<0.5){0} 
+                    else {1} 
+                 }
+# next step: use library 'caret'
+
+# --- 4.3.1) normal train test split for validate model ----
+
+set.seed(123)
+trainindex <- sample((1:nrow(loandata)), nrow(loandata)*.8)
+loandatatrain <- loandata[trainindex,c(2,8:18)]
+loandatavalid <- loandata[-trainindex,c(2,8:18)]
+
+nrow(loandatatrain)
+nrow(loandatavalid)
+
+# --- 4.3.1.1) modeling - logistic regression (selected params)- train data----
+fitmodelsmall <- glm(LStatus ~ Age + AGender + GCollateralType,
+                     family = binomial(link="logit"),
+                     data = loandatatrain)
+summary(fitmodelsmall)
+
+# --- 4.3.1.2) prediction (selected params) - validated data  ----
+
+pdsmallvec <- predict.glm(fitmodelsmall,
+                          newdata = loandatavalid,
+                          type = "response")
+
+summary(pdsmallvec)
+
+
+# --- 4.3.2.1) modeling - logistic regression (full params)- train data----
+fitmodelfull <- glm(LStatus ~ .,
+                     family = binomial(link="logit"),
+                     data = loandatatrain)
+summary(fitmodelfull)
+
+# --- 4.3.2.2) prediction (full params) - validated data  ----
+
+pdfullvec <- predict.glm(fitmodelfull,
+                          newdata = loandatavalid,
+                          type = "response")
+
+summary(pdfullvec)
+
+# --- 4.3.3) ROC: small vs full model - normal train test split ----
+
+roc3 <- roc(loandatavalid$LStatus  ~ pdsmallvec, percent=TRUE,
+            plot=TRUE, print.auc=TRUE, col="blue",lty = 5,
+            auc.polygon=TRUE, print.auc.y=50)
+roc4 <- roc(loandatavalid$LStatus  ~ pdfullvec, percent=TRUE,
+            plot=TRUE, print.auc=TRUE, col="red", lty = 5,
+            add=TRUE, print.auc.y=100)
+legend("topleft", c("Small Model","Full Model"),
+       col = c("blue","red"), lty=5)
+
+
+# --- 4.4.1) modeling and prediction on small model - Cross-Validation----
+
+
+set.seed(4587)
+size <- nrow(loandatafit)
+batchvec <- sample(rep(1:10,length.out=size),size)
+pdsmallxvec <- rep(NA,size);
+for (k in 1:10){
+        validdata <- loandatafit[batchvec==k,]
+        traindata <- loandatafit[!(batchvec==k),]
+        fitmodel <- glm(LStatus ~ Age + AGender + GCollateralType,
+                        family = binomial(link="logit"),
+                        data = traindata)
+        pdsmallxvec[batchvec==k] <- predict.glm(fitmodel,
+                                               newdata = validdata,
+                                               type = "response")
+}
+
+# --- 4.4.2) modeling and prediction on full model - Cross-Validation----
+
+set.seed(4587)
+size <- nrow(loandatafit)
+batchvec <- sample(rep(1:10,length.out=size),size)
+pdfullxvec <- rep(NA,size);
+for (k in 1:10){
+        validdata <- loandatafit[batchvec==k,]
+        traindata <- loandatafit[!(batchvec==k),]
+        fitmodel <- glm(LStatus ~ .,
+                        family = binomial(link="logit"),
+                        data = traindata)
+        pdfullxvec[batchvec==k] <- predict.glm(fitmodel,
+                                               newdata = validdata,
+                                               type = "response")
+}
+
+
+# --- 4.4.3) ROC: small vs full model - Cross-Validation ----
+
+roc5 <- roc(loandatafit$LStatus  ~ pdsmallxvec, percent=TRUE,
+            plot=TRUE, print.auc=TRUE, col="blue",lty = 5,
+            auc.polygon=TRUE, print.auc.y=50)
+roc6 <- roc(loandatafit$LStatus  ~ pdfullxvec, percent=TRUE,
+            plot=TRUE, print.auc=TRUE, col="red", lty = 5,
+            add=TRUE, print.auc.y=100)
+legend("topleft", c("Small Model","Full Model"),
+       col = c("blue","red"), lty=5)
+
+
+

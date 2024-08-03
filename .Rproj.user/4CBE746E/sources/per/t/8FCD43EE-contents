@@ -1,0 +1,25 @@
+avec <- 1:1000000
+time1 <- system.time(
+    for (i in 1:length(avec)){
+        avec[i] <- avec[i]*10
+    }
+)
+
+avec <- 1:1000000
+time2 <- system.time( avec<-avec*10 )
+
+
+
+amat <- matrix(1:300000,ncol=3)
+outvec <- c()
+time1 <- system.time(
+    for(i in 1:nrow(amat)){
+        outvec[i]<-mean(amat[i,])
+    }
+)
+
+outvec <- c()
+time2 <- system.time( outvec <- apply(amat, 1, mean) )
+
+outvec <- c()
+time3 <- system.time( outvec <- rowMeans(amat) )

@@ -1,0 +1,988 @@
+# chapter 2 ----
+setwd("~/000_DataScience/01_R/02DS_CU/99_545")
+
+a <- seq(1,10)
+a
+class(a)
+
+objects()  # call current object
+
+ls()    # call current object
+
+rm(a)    # remove object
+rm(list = ls())    # remove everything
+
+
+# workspace, .RData
+
+getwd()
+
+# chapter 5 ----
+rm(list=ls())   # clear environment
+# q()  # quit software  %>%  save workspace .RData
+
+# operation on row
+# filter
+# slice
+# arrange
+# 
+# operation on column
+# select
+# rename
+# mutate
+# relocate
+# 
+# group of row
+# summarize
+
+library(gapminder)
+library(tidyverse)
+
+str(gapminder)    # gapminder: example of tibble
+
+head(gapminder)
+
+gapminder %>% select(country)  %>% unique()  %>% count()
+
+class(gapminder)
+
+gapminder %>% head()
+head(gapminder)
+
+gapminder %>% tail(3)
+
+iris
+class(iris)   # conventional dataframe,not tibble
+
+iris %>% as_tibble()  ->  iris_tibble
+# advantage_tibble: hold data with several types
+
+class(iris_tibble)    # tibble
+
+
+
+names(iris_tibble)
+
+iris %>% ncol()
+iris %>% nrow()
+iris_tibble %>% ncol()    # no of col
+iris %>% length()    # no of col
+gapminder %>% length()
+
+str(iris_tibble)
+str(iris)
+
+dim(gapminder)
+dim(iris)
+dim(iris_tibble)
+
+summary(gapminder)
+summary(iris)
+summary(iris_tibble)
+
+iris_tibble %>% summary()
+
+# plot(X, y, type, col, main, xlab, ylab)
+plot(lifeExp ~ year, gapminder)
+plot(lifeExp ~ year, data = gapminder)
+plot(lifeExp ~ gdpPercap, gapminder)
+plot(lifeExp ~ log(gdpPercap), gapminder)
+# gapminder %>% plot(lifeExp ~ year) # plot cannot chain
+
+head(gapminder$lifeExp)    # return as vector
+gapminder %>% select(lifeExp) %>% head()    # return as df
+
+
+head(gapminder$lifeExp)  %>% plot()    # scatter: auto index x
+gapminder %>% select(lifeExp) %>% head() %>% plot()  # df as x (not desired)
+
+gapminder$pop %>% hist()
+hist(gapminder$pop, 10)
+hist(gapminder$lifeExp, 10)
+
+gapminder$pop %>% summary()
+
+gapminder %>% str()
+
+class(gapminder$country)
+
+summary(gapminder$continent)
+gapminder$continent %>% summary()
+
+levels(gapminder$continent)
+nlevels(gapminder$continent)
+str(gapminder$continent)
+
+class(gapminder$year)
+class(gapminder$lifeExp)
+
+summary(gapminder$year)
+table(gapminder$year)
+
+table(gapminder$continent)
+table(gapminder$continent) %>% barplot()
+gapminder$continent %>% table() %>% barplot()
+
+
+p <- ggplot(filter(gapminder,continent !="Oceania"),
+            aes(x = gdpPercap, y=lifeExp))
+p <- p + scale_x_log10()
+p + geom_point()
+p + geom_point(aes(color=continent))
+p + geom_point(alpha = (1/3),size=3) + geom_smooth(lwd=2, se=FALSE)
+p + geom_point(alpha = (1/3), size=3) + facet_wrap(~ continent) + 
+    geom_smooth(lwd=1.5, se = FALSE)
+
+
+# chapter 6 ----------
+
+class(gapminder)
+
+
+iris
+class(iris)
+as_tibble(iris)
+
+# 6.1 `filter()`----
+
+filter(gapminder, lifeExp<29) 
+gapminder %>% filter(lifeExp<29)
+
+gapminder %>% filter(lifeExp<29)
+filter(gapminder, country =="Rwanda", year > 1979 )
+# filter(gapminder, country == c("Rwanda","Afghanistan"), year > 1979 ) # not correct
+filter(gapminder, country %in% c("Rwanda","Afghanistan"), year > 1979 )
+
+gapminder[gapminder$lifeExp < 29, ]  # typical R-base code
+subset(gapminder, country == "Rwanda") # same with 'filter' for simple case
+subset(gapminder, country == "Rwanda", year > 1979 ) # NOT correct
+subset(gapminder, country == "Rwanda" & year > 1979 ) # use operator
+
+# The pipe operator  %>%  takes the thing on the left-hand-side and pipes it into 
+# the function call on the right-hand-side – literally, drops it in as the first argument
+
+gapminder %>% head(3)
+
+# think “gets” whenever you see the assignment operator, <-
+# think “then” whenever you see the pipe operator, %>%
+
+# 6.5 `select()`----
+
+
+select(gapminder, year, lifeExp)
+gapminder %>% 
+    select (year, lifeExp) %>% 
+    head(4)
+
+# typical R-based code
+gapminder[gapminder$country == "Cambodia", c("year","lifeExp")]
+
+
+gapminder  %>% 
+    filter(country=="Cambodia") %>% 
+    select(year, lifeExp)
+
+# typical R-based code
+gapminder[gapminder$country == "Cambodia",c("year", "lifeExp")]
+gapminder[,3:4]   # just recap format
+
+
+# chapter 7 ----
+
+# filter() row-wise
+# select() data-var, col-wise
+
+# LHS == left-hand side
+
+my_gap <- gapminder   # explicit copy for future use
+(my_gap <- gapminder)    # assign and run var
+
+# analyze, not store
+my_gap %>% filter(country == "Canada")
+
+# store with typical R-based code 
+my_precious <- my_gap %>% filter(country == "Canada")
+my_precious
+
+# store with  %>% & ->  
+my_gap %>% filter(country == "Canada") -> my_precious2
+
+ls()
+
+# create new var by `new var`
+
+# create normalized `gdpPercap`
+
+ctib <- my_gap %>% 
+    filter(country == "Canada")
+
+ctib
+
+# 7.4 `mutate()`----
+
+my_gap <- my_gap %>%
+    mutate(tmp = rep(ctib$gdpPercap, nlevels(ctib$country)),
+       gdpPercapRel = gdpPercap/tmp,
+       tmp = NULL)    # operate sequentially
+
+names(my_gap)
+
+# nlevels(ctib$country)    # num_country: check concept
+# rep(c(4,10,12),3)    # repeat as batch: check concept
+# # this case set of seq of data (yr1, yr2,yr3,...) is same
+
+my_gap %>% head(5)
+
+my_gap  %>% 
+    filter(country == "Canada") %>% 
+    select(country, year, gdpPercapRel)
+
+summary(my_gap$gdpPercapRel)
+
+
+# try ggplot ----
+
+g <- ggplot(filter(my_gap, year ==1972),
+            aes(x=pop, y=gdpPercapRel))
+
+g <- g + scale_x_log10()
+g + geom_point()
+g + geom_point(aes(color=continent))
+
+
+# 7.5 `arrange()` ----
+
+my_gap %>% 
+    arrange(year, country)
+
+my_gap %>% 
+    arrange(desc(gdpPercap),country)
+
+my_gap %>% 
+    filter(year == 2007) %>% 
+    arrange(desc(lifeExp))
+
+my_gap %>% 
+    filter(year == 2007) %>% 
+    filter(continent == "Africa") %>% 
+    arrange(desc(lifeExp))
+
+# suggestion 
+#     I advise that your analyses NEVER rely on 
+# rows or variables being in a specific order
+
+
+# 7.6 `rename()` ----
+# for rename variables
+# in python: camelcase for Class()
+
+my_gap %>% 
+    rename(life_exp = lifeExp,
+           gdp_percap = gdpPercap,
+           gdp_percap_rel = gdpPercapRel)    # snake_case
+# note: this case just display, not store
+
+# 7.7 `select()` and rename ----
+ # feature: can rename & reposition vars
+
+my_gap %>% 
+    filter(country == "Burundi", year > 1996) %>% 
+    select(yr = year, lifeExp,gdpPercap)
+
+my_gap %>% 
+    filter(country == "Burundi", year > 1996) %>% 
+    select(yr = year, lifeExp,gdpPercap) %>% 
+    select(gdpPercap, everything())    # move to 1st col
+
+# 7.8 `group_by()` ----
+
+# counting thing up
+# `group_by()`, `summarize()`, `mutate()`, `tally()`
+
+levels(my_gap$continent)
+
+# check concept `n()`
+summarize(my_gap, n())
+
+my_gap %>% 
+    group_by(continent) %>% 
+    summarise(n=n())
+
+my_gap %>% 
+    group_by(continent) %>% 
+    tally()   # much more easier
+
+my_gap %>% 
+    count(continent)
+
+# typical R-based code - but table with different orientation 
+table(gapminder$continent)
+
+str(table(gapminder$continent))    # table
+
+
+my_gap %>% 
+    group_by(continent) %>% 
+    summarise(avg = mean(lifeExp),
+              min = min(lifeExp),
+              max = max(lifeExp)
+              )
+my_gap %>% 
+    group_by(continent) %>% 
+    summarise(avg = mean(lifeExp)) %>% 
+    arrange(desc(continent))
+
+my_gap %>% 
+    group_by(continent) %>% 
+    summarise(avg_ = mean(lifeExp)) %>% 
+    arrange(desc(continent))
+
+my_gap %>% 
+    group_by(continent) %>% 
+    summarise(avg_ = mean(lifeExp)) %>% 
+    arrange(desc(avg_))
+
+
+my_gap %>% 
+    group_by(country) %>% 
+    summarise(avg_ = mean(lifeExp)) %>% 
+    arrange(desc(avg_)) %>% 
+    head(3)
+
+my_gap %>% 
+    group_by(country) %>% 
+    summarise(avg_ = mean(lifeExp)) %>% 
+    arrange(desc(avg_)) %>% 
+    tail(3)
+
+my_gap %>% 
+    group_by(continent) %>% 
+    summarise(n_=n(),
+              n_country = n_distinct(country)
+              )
+starwars %>% head()
+
+
+starwars %>% 
+    group_by(sex) %>% 
+    summarise(n=n())
+
+
+starwars %>% 
+    group_by(species) %>% 
+    summarise(n=n())
+
+starwars %>% 
+    group_by(homeworld) %>% 
+    summarise(n=n()) %>% 
+    arrange(desc(n)) %>% 
+    head(5)
+
+# general summation
+# `mean()`, `median()`, `var()`,`sd()`, `mad()`, `IQR()`, `min()`, `max()`
+# `summarize_at()`, 
+
+# summarize_at() : apply on several vars and params
+my_gap %>% 
+    group_by(continent) %>% 
+    summarise_at(vars(lifeExp,gdpPercapRel), 
+                 list(mean_ = mean,
+                      min_ = min,
+                      max_ = max))
+
+my_gap %>% 
+    filter(year %in% c(1952,2007)) %>% 
+    group_by(continent,year) %>% 
+    summarize_at(vars(lifeExp,gdpPercap),
+                 list( ~ mean(.), 
+                       ~ min(.),
+                       ~ max(.)))
+
+my_gap %>% 
+    filter(year %in% c(1952,2007)) %>% 
+    group_by(continent,year) %>% 
+    summarize_at(vars(lifeExp,gdpPercap),
+                 list( mean_ = mean, 
+                       min_ = min,
+                       max_ = max))
+
+my_gap %>% 
+    filter(continent == "Asia") %>% 
+    group_by(year) %>% 
+    summarize(min_lifeExp = min(lifeExp),
+              max_lifeExp = max(lifeExp))
+
+
+
+
+# 7.9 `group mutate` ----
+
+# 7.9.1 compute with group-wise
+# `first()`, 
+
+my_gap %>% 
+    group_by(country) %>% 
+    select(country, year, lifeExp) %>% 
+    filter(year < 1963) %>% 
+    mutate(lifeExp_gain = lifeExp - first(lifeExp))   # first() consider on params in group_by:Country
+
+
+# *** FOR THIS CASE, be aware of inconsistent country for baseline,
+# it would be changed if sequence changed ***
+my_gap %>% 
+    group_by(year) %>% 
+    select(country, year, lifeExp) %>% 
+    filter(year < 1963) %>% 
+    mutate(lifeExp_gain = lifeExp - first(lifeExp))   # first() consider on params in group_by:Year
+
+
+# 7.9.2 window functions: take n input, give back n outputs
+# `rank()`
+
+
+my_gap %>% 
+    filter(continent == "Asia") %>% 
+    select(year, country, lifeExp) %>% 
+    group_by(year) %>% 
+    filter(min_rank(desc(lifeExp))<2 | min_rank(lifeExp)<2) %>%    # no function `max_rank()`
+    arrange(year) %>% 
+    print(n= Inf)    # use `print()` return all output
+
+
+# step#1
+
+asia <- my_gap %>% 
+    filter(continent == "Asia") %>% 
+    select(year, country, lifeExp) %>% 
+    group_by(year)
+
+asia
+
+# step#2
+
+asia %>% 
+    mutate(le_rank = min_rank(lifeExp),
+           le_des_rank = min_rank(desc(lifeExp))) %>% 
+    filter(year>1995)
+
+asia %>% 
+    mutate(le_rank = min_rank(lifeExp),
+           le_des_rank = min_rank(desc(lifeExp))) %>% 
+    filter(country %in% c("Afghanistan", "Japan", "Thailand"),year>1995)
+
+
+my_gap %>% 
+    filter(continent == "Asia") %>% 
+    select(year, country, lifeExp) %>%
+    arrange(year) %>% 
+    group_by(year) %>% 
+    top_n(1,wt = lifeExp)    # by default, top_n sort by max value, hence min rank (verbally, rank#1)
+    # top_n(1,wt = desc(lifeExp))    # get min
+
+
+my_gap %>% 
+    select(continent, country, year, lifeExp) %>% 
+    group_by(continent, country) %>%
+    mutate(le_delta = lifeExp - lag(lifeExp)) %>%   # lag() take previous data (based on params in group_by)
+    summarise(worst_le_delta = min(le_delta, na.rm = TRUE)) %>% 
+    top_n(-1, wt =worst_le_delta) %>%     # no bottom_n, use -n
+    arrange(worst_le_delta)
+    
+    
+
+# chapter 8 tidyr -----
+
+# 8.1 intro ----
+library(tidyverse)
+
+library(RCurl)  # for get data from GitHub
+# dataset from github
+lotr_tidy <- read.csv(
+    text=getURL("https://raw.githubusercontent.com/jennybc/lotr-tidy/master/data/lotr_tidy.csv"),
+    header=TRUE,
+    stringsAsFactors = TRUE
+)
+lotr_tidy %>% str()
+
+lotr_tidy <- as_tibble(lotr_tidy)
+
+lotr_tidy <- lotr_tidy %>% 
+    mutate(Film = factor(Film,
+                         levels=c( "The Fellowship Of The Ring","The Two Towers","The Return Of The King")))
+
+levels(lotr_tidy$Film)
+
+
+
+# ***** Homework: syntax for read_csv ********
+# pending issue: AUTO convert for all string-data column
+rm(lotr_new)
+
+lotr_new <- read_csv(
+    "https://github.com/jennybc/lotr-tidy/raw/master/data/lotr_tidy.csv",
+    col_types = cols(
+                Film = col_factor(),
+                Race = col_factor(),
+                Gender = col_factor(),
+                Words = col_double()
+                ),
+    col_names = TRUE
+    )
+
+
+str(lotr_new)
+
+# ***** end of homework *********
+
+
+lotr_tidy %>% 
+    count(Gender, Race, wt= Words)
+
+# group_by() + summarize()
+lotr_tidy %>% 
+    group_by(Gender,Race) %>% 
+    summarize(sum_ = sum(Words))
+
+# typical R-base code
+aggregate(Words ~ Gender + Race , data = lotr_tidy, FUN = sum)
+
+
+
+
+
+by_race_film <- lotr_tidy %>% 
+    group_by(Film, Race) %>% 
+    summarize(Words = sum(Words))
+by_race_film
+
+
+
+# typical R-base code
+by_race_film_n1  <- aggregate(Words ~ Film + Race, data=lotr_tidy, FUN= sum)
+by_race_film_n1   # format is different with group_by
+by_race_film_n2  <- aggregate(Words ~ Film * Race, data=lotr_tidy, FUN= sum)
+by_race_film_n2   # able to use + or *
+
+
+# whenever you use *, both the interaction and the individual components 
+
+# ggplot - simple
+p <- ggplot(by_race_film, aes(x = Film, y = Words))
+p + geom_bar(stat = "identity", position = "dodge") +
+    coord_flip()
+
+# ggplot - with subgroup
+p <- ggplot(by_race_film, aes(x = Film, y = Words, fill = Race))
+p + geom_bar(stat = "identity", position = "dodge") +
+    coord_flip() + guides(fill = guide_legend(reverse = TRUE))
+
+
+
+# 8.2 gather ----
+library(tidyverse)
+
+# import file
+getwd()
+
+fship <- read_csv("https://github.com/jennybc/lotr-tidy/raw/master/data/The_Fellowship_Of_The_Ring.csv")
+ttow <- read_csv("https://github.com/jennybc/lotr-tidy/raw/master/data/The_Two_Towers.csv")
+rking <- read_csv("https://github.com/jennybc/lotr-tidy/raw/master/data/The_Return_Of_The_King.csv")
+
+
+fship
+
+rking
+
+lotr_untidy <- bind_rows(fship, ttow, rking)
+str(lotr_untidy)
+
+lotr_untidy
+
+lotr_tidy <- 
+    gather(lotr_untidy, key ='Gender', value = 'Words',Female,Male)
+lotr_tidy
+
+# Write tidy data as CSV
+write_csv(lotr_tidy, path = file.path("DS_CU","lotr_tidy.csv"))
+
+Female <- read_csv("https://github.com/jennybc/lotr-tidy/raw/master/data/Female.csv")
+Male <- read_csv("https://github.com/jennybc/lotr-tidy/raw/master/data/Male.csv")
+
+Female
+Male
+
+hw2_untidy <- bind_rows(Female, Male)
+hw2_untidy
+
+hw2_tidy <- 
+    gather(hw2_untidy, key='Race', value = "Words", Elf, Hobbit, Man)
+hw2_tidy
+
+names(hw2_tidy)
+
+hw2_tidy_f <- select(hw2_tidy, Film, Race, Gender, Words)
+hw2_tidy_f
+
+# Q: total words by race across all data()
+
+hw2_tidy_f %>% 
+    count(Race, wt= Words)
+# Q: total words by film across all data()
+
+hw2_tidy_f %>% 
+    count(Film, wt= Words)
+
+# 8.3 spread & unite ----
+
+library(tidyverse)
+
+lotr_tidy
+
+lotr_tidy %>% 
+    spread(key = Race, value= Words)
+lotr_tidy %>% 
+    spread(key = Gender, value= Words)
+
+lotr_tidy %>% 
+    unite(Race_Gender,Race,Gender)
+
+lotr_tidy %>% 
+    unite(Race_Gender,Race,Gender) %>% 
+    spread(key = Race_Gender, value = Words)
+    
+
+lotr_tidy %>% 
+    unite(Film_Gender,Film, Gender) %>% 
+    spread(key = Film_Gender, value = Words)
+
+
+# 8.4 bonus ----
+
+
+# base::rbind() may got warning for data with different number of factor 
+
+# bind_rows(): combine as string, so need additional step to convert
+# soln: lapply  'factor()'
+
+
+
+# ******************
+
+# from local
+lotr_files <- file.path("DS_CU", c("The_Fellowship_Of_The_Ring.csv",
+                                  "The_Two_Towers.csv",
+                                  "The_Return_Of_The_King.csv"))
+lotr_list <- lapply(lotr_files, read.csv)    # store as list, so load faster
+
+str(lotr_list)
+
+lotr_untidy_from_list <- bind_rows(lotr_list)
+str(lotr_untidy_from_list)
+
+lotr_untidy_from_list
+as_tibble(lotr_untidy_from_list) -> lotr_untidy_from_list
+str(lotr_untidy_from_list)  
+
+
+
+# do factor
+lotr_untidy_from_list <- lotr_untidy_from_list %>% 
+    mutate(Film = factor(Film),
+           Race = factor(Race))
+
+lotr_untidy_from_list
+
+# ******************
+
+# from github
+lotr_files2 <- file.path("https://github.com/jennybc/lotr-tidy/raw/master/data/",
+                        c("The_Fellowship_Of_The_Ring.csv",
+                                   "The_Two_Towers.csv",
+                                   "The_Return_Of_The_King.csv"))
+lotr_list2 <- lapply(lotr_files2, read.csv)    # store as list, so load faster
+
+str(lotr_list2)
+
+lotr_untidy_from_list2 <- bind_rows(lotr_list2)
+str(lotr_untidy_from_list2)
+
+lotr_untidy_from_list2
+as_tibble(lotr_untidy_from_list2) -> lotr_untidy_from_list2
+str(lotr_untidy_from_list2)
+
+# do factor
+lotr_untidy_from_list2 <- lotr_untidy_from_list2 %>% 
+    mutate(Film = factor(Film),
+           Race = factor(Race))
+
+lotr_untidy_from_list2
+
+# 9 Writing and reading files ----
+
+# 9.3 locate data ----
+library(fs)
+(gap_tsv <- path_package("gapminder", "extdata", "gapminder.tsv"))
+
+gapminder <- read_tsv(gap_tsv)
+gapminder
+
+str(gapminder, give.attr = FALSE)    #suppress detail
+# typical route
+library(gapminder)
+gapminder
+
+
+# 9.8 reorder factor by criteria ----
+# `fct_reorder()`
+
+my_gap <- gapminder 
+
+
+my_gap_max <- my_gap %>%
+    select(country,continent,lifeExp) %>% 
+    group_by(country,continent) %>% 
+    summarise(max_ = max(lifeExp)) %>% 
+    ungroup()    # clear vector from group_by
+
+my_gap_max %>% 
+    mutate(country = factor(country),
+           continent = factor(continent)) -> my_gap_max
+
+head(levels(my_gap_max$country)) # alphabetical order: start at Afghanistan
+
+my_gap_max <- my_gap_max %>% 
+    mutate(country = fct_reorder(country,max_,max,.desc = TRUE))
+
+head(levels(my_gap_max$country)) # life expectancy order (show when computation i.e. ggplot)
+str(my_gap_max)    # start at Japan
+# chapter 10 ----
+library(tidyverse)
+library(gapminder)
+
+# *** The worst kind of factor is the stealth factor ***
+
+# Where do stealth factors come from? Base R has a burning desire to turn character 
+# information into factor. The happens most commonly at data import via read.table() 
+# and friends. But data.frame() and other functions are also eager to convert character 
+# to factor. To shut this down, use stringsAsFactors = FALSE in read.table() and data.frame() 
+# or – even better – use the tidyverse! 
+
+
+
+# 10.4 factor inspection ----
+
+str(gapminder$continent)
+str(gapminder)
+nlevels(gapminder$continent)
+class(gapminder$continent)
+
+gapminder %>% 
+    count(continent)
+
+fct_count(gapminder$continent)
+
+gapminder %>% 
+    count(year)
+
+# fct_count(gapminder$year)    # valid only for factor or character
+
+
+# 10.5 drop factor ----
+
+nlevels(gapminder$country)
+
+h_countries <- c("Egypt", "Haiti", "Romania", "Thailand", "Venezuela")
+
+h_gap <- gapminder %>% 
+    filter(country %in% h_countries)
+
+nlevels(h_gap$country)     # still be 142
+
+
+# way#1 apply `droplevels()` ----
+h_gap_dropped <- h_gap %>% 
+    droplevels()
+
+nlevels(h_gap_dropped$country)     # 5 levels 
+
+# way#2 use `forcats::fct_drop()` : required `mutate()` for revise ----
+
+h_gap$country %>% 
+    fct_drop() %>% 
+    levels()
+
+
+# exercise: drop level
+my_gap %>% 
+    select(country, continent,pop) %>% 
+    group_by(country, continent) %>% 
+    summarize(pop_avg = mean(pop)) %>% 
+    filter(pop_avg < 250000)  -> my_gap_temp
+my_gap_temp
+
+    
+my_gap_temp <- my_gap_temp %>% 
+    mutate(country = fct_drop(country))
+
+nlevels(my_gap_temp$country)
+
+# 10.6 change order ----
+
+# default order is alphabetical
+
+gapminder$continent %>% 
+    levels()
+
+# order by frequency
+
+gapminder$continent %>% 
+    fct_infreq() %>% 
+    levels()
+
+# order by frequency - rev
+
+gapminder$continent %>% 
+    fct_rev() %>% 
+    levels()
+
+gapminder %>% 
+    group_by(continent) %>% 
+    summarize(count_= n()) -> g_abc
+
+
+
+# change factor order
+g_freq_a <- g_abc %>% 
+    mutate(continent = fct_reorder(continent,count_,))
+
+g_freq_d <- g_abc %>% 
+    mutate(continent = fct_reorder(continent,count_,.desc=TRUE))
+
+levels(g_abc$continent)
+levels(g_freq_a$continent)
+levels(g_freq_d$continent)
+
+# ggplot + library::patchwork ----
+
+library(patchwork)
+
+
+p <- ggplot(g_abc,
+            aes(x=continent, y=count_))
+q <- ggplot(g_freq_a,
+            aes(x=continent, y=count_))
+r <- ggplot(g_freq_d,
+            aes(x=continent, y=count_))
+p + geom_bar(stat = "identity") + coord_flip() +
+    q + geom_bar(stat = "identity") + coord_flip() +
+    r + geom_bar(stat = "identity") + coord_flip()
+
+
+# try unconventional layout
+
+p <- ggplot(g_abc,
+            aes(x=continent, y=count_))
+q <- ggplot(g_freq_a,
+            aes(x=continent, y=count_))
+r <- ggplot(g_freq_d,
+            aes(x=continent, y=count_))
+(p + geom_bar(stat = "identity") + coord_flip() |
+    q + geom_bar(stat = "identity") + coord_flip() 
+    ) /
+    (r + geom_bar(stat = "identity") + coord_flip())
+
+
+
+gap_asia_2007 <- gapminder %>% 
+    filter(year == 2007, continent == "Asia")
+
+
+(ggplot(gap_asia_2007, 
+       aes(x = lifeExp, y = country)) + geom_point()
+    )|
+(ggplot(gap_asia_2007, 
+        aes(x = lifeExp, y = fct_reorder(country, lifeExp))) +
+    geom_point()
+    )
+
+gap_asia_2007_top <- gapminder %>% 
+    filter(year == 2007, continent == "Asia") %>% 
+    top_n(20,wt=lifeExp)
+ggplot(gap_asia_2007_top, 
+       aes(x = lifeExp, y = fct_reorder(country, lifeExp))) +
+    geom_point()
+
+# `fct_reorder2()`: reorder color for le ----
+
+h_countries <- c("Egypt", "Haiti", "Romania", "Thailand", "Venezuela")
+
+h_gap <- gapminder %>% 
+    filter(country %in% h_countries) %>% 
+    droplevels()
+ggplot(h_gap, aes(x = year,y = lifeExp, 
+                  color=country))+geom_line()
+
+ggplot(h_gap, aes(x = year, y = lifeExp,
+                  color = fct_reorder2(country, year,lifeExp ))) +
+    geom_line() + labs(color ="country")
+
+# syntax: fct_reorder2(factor, x, awfulness)
+
+
+# 10.7 customize order of level as desired ----
+# apply `fct_relevel()`
+
+
+# 10.8 recode (set alias) level ----
+# apply `fct_recode()`
+i_gap <- gapminder %>% 
+    filter(country %in% c("United States", "Sweden", "Australia")) %>% 
+    droplevels()
+i_gap$country %>% levels()    # alphabetical as original
+i_gap$country %>% 
+    fct_recode("US" = "United States", "Ozi"= "Australia") %>% 
+    levels()
+
+# exercise droplevels, recode ----
+
+i_g <- gapminder %>% 
+    filter(country %in% c("Australia", "Korea, Dem. Rep.", "Korea, Rep.")) %>% 
+    droplevels()
+i_g$country %>% levels()
+
+i_g$country %>% 
+    fct_recode("Ozi"="Australia","North Korea"="Korea, Dem. Rep.","South Korea"="Korea, Rep.") %>% 
+    levels()
+
+# 10.9 Grow factor : combine 2 df with different factors  `fct_c()` ----
+# apply `fct_c()`
+
+
+df1 <- gapminder %>%
+    filter(country %in% c("United States", "Mexico"), year > 2000) %>%
+    droplevels()
+df2 <- gapminder %>%
+    filter(country %in% c("France", "Germany"), year > 2000) %>%
+    droplevels()
+
+levels(df1$country)
+levels(df2$country)
+
+fct_c(df1$country, df2$country)
+
+
+# `fct_c()` concat factor + `mutate()`
+# df_consol <- bind_rows(df1,df2) %>% 
+#     mutate(country = fct_c(df1$country, df2$country)) #redundant
+
+df_consol <- bind_rows(df1,df2)
+
+str(df_consol)
+levels(df_consol$country)
+
+
+# for this case, `rbind()` seem to be better
+df_check <- rbind(df1,df2)
+levels(df_check$country)
+str(df_check)
+

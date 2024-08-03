@@ -1,0 +1,152 @@
+# --- Slide Set#2 ----
+# https://drive.google.com/file/d/1tdzae29Ahy_cyBvdyB71ECRMlQnn6giX/view?usp=sharing
+
+# --- Import file ----
+library(RCurl)  # for get data from GitHub
+# dataset from github
+loandataorg <- read.csv(
+    text=getURL("https://raw.githubusercontent.com/kseksan/Credit-Scoring/master/loandataorg.csv"),
+    header=TRUE,
+    stringsAsFactors = TRUE
+    )
+
+# --- EDA ----
+# list col name
+names(loandataorg)
+
+is.factor(loandataorg$AGender)  # auto convert during loading step
+
+head(loandataorg)
+# head(loandataorg,3)    # load 3 row
+
+summary(loandataorg)
+
+# 1) finding : NA in several col i.e. AIncome,ANumberChildren
+# Question: if not treat, is it can analyze (no error)?
+   # for Scikit-Learn, it return error
+# 2) incorrect datatype i.e. 
+    # ID >> should be Character
+    # LStatus >> should be Factor (1,0)
+
+# --- revise datatype ----
+
+loandataorg$ID <- as.character(loandataorg$ID)
+loandataorg$LStatus <- as.factor(loandataorg$LStatus)
+
+summary(loandataorg)    # summary changed
+
+# --- Descriptive Statistics Analysis ----
+
+loandata <- loandataorg
+summary(loandata)
+
+# --- set subplot and plot graph - LAamount ----
+par(mfrow = c(1,2))
+boxplot(loandata$LAmount,
+        main ="Box Plot of loandata$LAmount"
+        )
+hist(loandata$LAmount)
+
+# review and set focusing range
+
+boxstat <- boxplot(loandata$LAmount)
+boxstat$stats
+
+class(boxstat$stats)   # matrix array
+# boxplot.stats: Box Plot Statistics
+
+# stats
+# a vector of length 5, containing the extreme of the lower whisker,
+# the lower ‘hinge’, the median, the upper ‘hinge’ 
+# and the extreme of the upper whisker.
+
+
+par(mfrow = c(1,2))
+boxplot(loandata$LAmount[loandata$LAmount <=1133800],
+        main ="Box Plot of loandata$LAmount <=1133800")
+hist(loandata$LAmount[loandata$LAmount <=1133800])
+
+
+# --- exercise - analyze on AIncome ----
+par(mfrow = c(1,2))
+
+box_AIncome <- boxplot(loandata$AIncome)
+box_AIncome$stats    # unable to use dot notation
+box_AIncome$stats[5]
+max(loandata$AIncome, na.rm=TRUE)
+
+hist(loandata$AIncome)
+
+
+# --- Bar and Pie Chart - AHousing ----
+
+
+barplot(summary(loandata$AHousing),
+        main="Bar Plot of loandata$AHousing",
+        cex.main=1)
+pie(summary(loandata$AHousing),
+    main="Bar Plot of loandata$AHousing",
+    cex.main=1)
+
+
+# *** try solving error of datatype later *** ----
+# data  <- summary(loandata$AHousing)
+# barplot(data, main="Bar Plot of loandata$AHousing")
+
+
+# --- Exercise - Bar and Pie Chart - AOccupation ----
+par(mfrow = c(1,2))
+pie(summary(loandata$AOccupation,maxsum = 4),
+    main="Bar Plot of loandata$AOccupation")
+pie(summary(loandata$AOccupation),
+    main="Bar Plot of loandata$AOccupation")
+
+summary(loandata$AOccupation,maxsum = 4)  #lump to others
+
+
+
+# --- 2 numerical vars - Scatter Plot ----
+par(mfrow = c(1,2))
+plot(loandata$Age, loandata$AIncome,
+     main="Scatter Plot of Age and AIncome")
+plot(loandata$Age[loandata$AIncome>0 &
+                  loandata$AIncome<50000],
+     loandata$AIncome[loandata$AIncome>0 &
+                    loandata$AIncome<50000],
+     xlab="Age", ylab= "0 < AIncome < 50000",
+     main="Scatter Plot of Age and AIncome")
+
+
+# --- exercise - 2 numerical vars - Scatter Plot - Age-ANumberChildren ----
+
+par(mfrow = c(1,1))
+plot(loandata$Age, loandata$ANumberChildren,
+     main="Scatter Plot of Age and ANumberChildren")
+
+
+
+
+# --- exercise - 2 categorical vars - Contingency Table ----
+
+mytable <- table(loandata$AEducation,loandata$AHousing)
+mytable
+
+prop.table(mytable)
+prop.table(mytable, margin=1)  # by row
+prop.table(mytable, margin=2)  # by col
+
+
+# --- exercise - 1 numerical, 1 categorical vars -  ~ Pivot Table ----
+
+# tapply(X, INDEX,...)
+tapply(loandata$LAmount,loandata$AEducation,mean)
+
+tapply(loandata$AIncome,loandata$AEducation,mean, na.rm=TRUE)
+
+# --- bonus  ~ Pivot Table ----
+tapply(loandata$AIncome,
+       list(loandata$AEducation,loandata$AMaritalStatus),
+       mean, na.rm=TRUE)
+
+
+
